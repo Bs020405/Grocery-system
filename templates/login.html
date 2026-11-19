@@ -1,0 +1,9 @@
+{% extends 'base.html' %}{% block body %}
+<div class="login-wrap"><div class="card" style="width:340px;padding:28px">
+ <div class="logo" style="padding:0 0 14px"><span class="lg">&#128722;</span>{{ store_name }}</div>
+ <h1>Store Login</h1>
+ <form method="post" class="form-row" style="flex-direction:column;align-items:stretch">
+  <label>Username<input name="username" autofocus required></label>
+  <label>Password<input name="password" type="password" required></label>
+  <button style="padding:12px">Login</button>
+ </form></div></div>{% endblock %}

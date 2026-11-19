@@ -1,0 +1,22 @@
+{% extends 'base.html' %}{% block body %}
+<div class="card" style="max-width:520px;margin:auto">
+ <h1 style="text-align:center">&#128722; Grocery Store</h1>
+ <p>Bill #{{ sale.id }}<br>Date: {{ sale.created }}<br>Customer: {{ sale.customer }}{% if sale.phone %} ({{ sale.phone }}){% endif %}<br>Payment: {{ sale.payment or 'Cash' }}</p>
+ <table><tr><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th></tr>
+ {% for i in items %}<tr><td>{{ i.name }}{% if i.gst_rate %} <small>(GST {{ '%g'|format(i.gst_rate) }}%)</small>{% endif %}</td>
+ <td class="right">{{ '%g'|format(i.qty) }} {{ i.unit }}</td>
+ <td class="right">{{ i.price }}</td><td class="right">{{ '%.2f'|format(i.qty*i.price) }}</td></tr>{% endfor %}
+ <tr><td colspan="3" class="right">Subtotal</td><td class="right">{{ '%.2f'|format(sale.subtotal) }}</td></tr>
+ <tr><td colspan="3" class="right">GST</td><td class="right">{{ '%.2f'|format(sale.gst) }}</td></tr>
+ <tr><td colspan="3" class="right">Discount</td><td class="right">-{{ '%.2f'|format(sale.discount) }}</td></tr>
+ <tr><th colspan="3" class="right">Total</th><th class="right">&#8377;{{ '%.2f'|format(sale.total) }}</th></tr>{% if kh and (kh.pending > 0.005 or kh.prev > 0.005) %}
+ <tr><td colspan="3" class="right">Paid now</td><td class="right">{{ '%.2f'|format(kh.paid) }}</td></tr>
+ <tr><td colspan="3" class="right">Pending on this bill</td><td class="right">{{ '%.2f'|format(kh.pending) }}</td></tr>
+ <tr><td colspan="3" class="right">Previous pending</td><td class="right">{{ '%.2f'|format(kh.prev) }}</td></tr>
+ <tr><th colspan="3" class="right">Total pending (Udhar)</th><th class="right">&#8377;{{ '%.2f'|format(kh.after) }}</th></tr>
+ {% endif %}</table>
+ <p style="text-align:center">Thank you! Visit again.</p>
+ <p class="noprint" style="text-align:center"><button type="button" onclick="window.print()">&#128424;&#65039; Print Bill</button>
+  <a class="btn grey" href="{{ url_for('billing') }}">New bill</a>
+  {% if kh %}<a class="btn grey" href="{{ url_for('khata_customer', phone=kh.phone) }}">View khata</a>{% endif %}</p>
+</div>{% endblock %}

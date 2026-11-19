@@ -1,0 +1,25 @@
+{% extends 'base.html' %}{% block body %}
+<h1>Khata (Udhar)</h1>
+
+<div class="tiles" style="margin-bottom:16px">
+ <div class="tile"><div class="ic c4">&#128210;</div><div><small>Total pending</small><b>&#8377;{{ '%.2f'|format(total_pending) }}</b></div></div>
+ <div class="tile"><div class="ic c2">&#128101;</div><div><small>Customers with pending</small><b>{{ n_pending }}</b></div></div>
+</div>
+
+<div class="card">
+ <form method="get" action="{{ url_for('khata') }}" class="form-row" style="margin-bottom:10px">
+  <label>Search<input name="q" value="{{ q }}" placeholder="Name or phone" autocomplete="off"></label>
+  <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="all" value="1" {{ 'checked' if show_all }}> Also show customers with nothing pending</label>
+  <button>Search</button>
+ </form>
+ <div class="scroll"><table>
+  <tr><th>Customer</th><th>Phone</th><th class="right">Total billed</th><th class="right">Received</th><th class="right">Pending</th><th></th></tr>
+  {% for b in rows %}<tr>
+   <td>{{ b.name or b.phone }}</td><td>{{ b.phone }}</td>
+   <td class="right">{{ '%.2f'|format(b.billed) }}</td><td class="right">{{ '%.2f'|format(b.received) }}</td>
+   <td class="right {{ 'low' if b.balance > 0.005 }}">&#8377;{{ '%.2f'|format(b.balance) }}</td>
+   <td class="right"><a class="btn grey" href="{{ url_for('khata_customer', phone=b.phone) }}">Open</a></td>
+  </tr>{% else %}<tr><td colspan="6" class="empty">No pending udhar. Choose payment "Udhar" while making a bill and the customer will appear here.</td></tr>{% endfor %}
+ </table></div>
+</div>
+{% endblock %}

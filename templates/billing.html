@@ -1,0 +1,120 @@
+{% extends 'base.html' %}{% block body %}
+<h1>New Bill</h1>
+
+<div class="card">
+ <h2>1. Choose items</h2>
+ <form method="get" action="{{ url_for('billing') }}" class="form-row" style="margin-bottom:12px">
+  <label>Search bar<input name="q" value="{{ q }}" placeholder="Type a product or category, e.g. milk" autocomplete="off" style="min-width:300px"></label>
+  <button>&#128269; Search</button>
+  {% if q %}<a class="btn grey" href="{{ url_for('billing') }}">Show all</a>{% endif %}
+ </form>
+ {% if prods %}
+ <form method="post" action="{{ url_for('billing_add') }}" id="addForm" data-q="{{ q }}">
+  <input type="hidden" name="q" value="{{ q }}">
+  <div id="rows">
+   <div class="irow form-row">
+    <label>Select item ({{ prods|length }}{% if q %} of {{ all_count }}{% endif %} products)
+     <select name="product_id" required style="min-width:320px">
+      <option value="">-- select item --</option>
+      {% for cat, group in prods|groupby('category') %}
+      <optgroup label="{{ cat }}">
+       {% for p in group %}<option value="{{ p.id }}" {{ 'disabled' if p.status }} {{ 'selected' if (pre == p.id or (q and prods|length == 1)) and not p.status }}>{{ p.name }} (&#8377;{{ '%g'|format(p.price) }}{% if p.status %} - {{ p.status }}{% else %}, stock {{ '%g'|format(p.stock) }}{% endif %})</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
+     </select></label>
+    <label>Quantity<input name="qty" type="number" step="0.01" min="0.01" value="1" style="width:100px"></label>
+    <button type="button" class="red rm" title="Remove this row" style="display:none">&times;</button>
+   </div>
+  </div>
+  <div class="form-row" style="margin-top:12px">
+   <button type="button" class="grey" id="moreRow">+ Another item</button>
+   <button id="addBtn">Add to bill</button>
+  </div>
+ </form>
+ <p class="empty" style="margin-bottom:0">Select an item, then press "+ Another item" to get a new dropdown for the next item. Press "Add to bill" once to add all of them. Out of stock and expired products cannot be selected.</p>
+ <script>
+ (function(){
+  var form=document.getElementById('addForm'), box=document.getElementById('rows');
+  var addBtn=document.getElementById('addBtn');
+  function rmHandler(e){var r=e.target.closest('.irow'); if(r) r.remove();}
+  box.addEventListener('click',function(e){if(e.target.classList.contains('rm')) rmHandler(e);});
+  document.getElementById('moreRow').onclick=function(){
+   var c=box.firstElementChild.cloneNode(true);
+   var s=c.querySelector('select'); s.selectedIndex=0; s.required=false;
+   c.querySelector('input[name=qty]').value=1;
+   c.querySelector('.rm').style.display='';
+   box.appendChild(c); s.focus();
+  };
+  form.addEventListener('submit',async function(e){
+   e.preventDefault();
+   var items=[].slice.call(box.querySelectorAll('.irow')).filter(function(r){return r.querySelector('select').value;});
+   if(!items.length){alert('Please select at least one item.');return;}
+   addBtn.disabled=true; addBtn.textContent='Adding...';
+   try{
+    for(var i=0;i<items.length;i++){
+     var fd=new FormData();
+     fd.append('product_id',items[i].querySelector('select').value);
+     fd.append('qty',items[i].querySelector('input[name=qty]').value||1);
+     fd.append('q',form.dataset.q||'');
+     await fetch(form.action,{method:'POST',body:fd,credentials:'same-origin'});
+    }
+   }catch(err){alert('Could not add some items. Please check the bill.');}
+   location.reload();
+  });
+ })();
+ </script>
+ {% else %}
+ <p class="empty">No products found for "{{ q }}". Try another word or click "Show all".</p>
+ {% endif %}
+</div>
+
+<div class="card">
+ <h2>2. Current bill</h2>
+ {% if lines %}
+ <div class="scroll"><table>
+  <tr><th>Item</th><th class="right">Qty</th><th class="right">Rate</th><th class="right">Amount</th><th></th></tr>
+  {% for l in lines %}<tr><td>{{ emoji(l.name, '') }} {{ l.name }}</td><td class="right">{{ '%g'|format(l.qty) }} {{ l.unit }}</td>
+   <td class="right">{{ '%g'|format(l.price) }}</td><td class="right">{{ '%.2f'|format(l.amount) }}</td>
+   <td class="right"><form method="post" action="{{ url_for('billing_remove', pid=l.id) }}"><button class="red">Remove</button></form></td></tr>{% endfor %}
+  <tr><td colspan="3" class="right">Subtotal</td><td class="right">{{ '%.2f'|format(subtotal) }}</td><td></td></tr>
+  <tr><td colspan="3" class="right">GST</td><td class="right">{{ '%.2f'|format(gst) }}</td><td></td></tr>
+  <tr><th colspan="3" class="right">Total (before discount)</th><th class="right">&#8377;{{ '%.2f'|format(total) }}</th><td></td></tr>
+ </table></div>
+ {% else %}<p class="empty">No items added yet. Select an item above and click "Add to bill".</p>{% endif %}
+</div>
+
+{% if lines %}
+<div class="card">
+ <h2>3. Customer and payment</h2>
+ <form method="post" action="{{ url_for('billing_checkout') }}" class="form-row" id="coForm" data-owed='{{ owed|tojson }}'>
+  <label>Customer name<input id="cName" name="customer" placeholder="Walk-in"></label>
+  <label>Phone<input id="cPhone" name="phone" inputmode="numeric"></label>
+  <label>Payment<select id="cPay" name="payment"><option>Cash</option><option>UPI</option><option>Card</option><option>Udhar</option></select></label>
+  <label id="paidWrap" style="display:none">Paid now (&#8377;)<input name="paid" type="number" step="0.01" min="0" value="0" style="width:110px"></label>
+  <label>Discount (&#8377;)<input name="discount" type="number" step="0.01" min="0" value="0" style="width:110px"></label>
+  <button>Generate Bill</button>
+ </form>
+ <p id="prevBal" class="warn" style="display:none;margin:10px 0 0"></p>
+ <p class="empty" style="margin-bottom:0">Udhar: name and 10-digit phone are required. Enter what the customer pays now in "Paid now" (0 if nothing); the rest is added to their khata.</p>
+ <script>
+ (function(){
+  var owed=JSON.parse(document.getElementById('coForm').dataset.owed||'{}');
+  var ph=document.getElementById('cPhone'), nm=document.getElementById('cName'), pay=document.getElementById('cPay');
+  var pw=document.getElementById('paidWrap'), note=document.getElementById('prevBal');
+  function key(v){v=(v||'').replace(/\D/g,'');return v.length>10?v.slice(-10):v;}
+  function upd(){
+   pw.style.display = pay.value==='Udhar' ? '' : 'none';
+   var o=owed[key(ph.value)];
+   if(o){
+    note.style.display='';
+    note.textContent='Previous pending: \u20b9'+o.balance.toFixed(2)+(o.name?' ('+o.name+')':'');
+    if(!nm.value && o.name) nm.value=o.name;
+   } else { note.style.display='none'; }
+  }
+  ph.addEventListener('input',upd); pay.addEventListener('change',upd); upd();
+ })();
+ </script>
+ <form method="post" action="{{ url_for('billing_clear') }}" style="margin-top:10px"><button class="grey">Clear bill</button></form>
+</div>
+{% endif %}
+{% endblock %}

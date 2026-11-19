@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ store_name }} - Store Manager</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"></head><body>
+<div class="app">
+{% if session.get('user') %}
+<aside class="side">
+ <div class="logo"><span class="lg">&#128722;</span>{{ store_name }}</div>
+ {% set cur = request.endpoint or '' %}
+ {% for ep, ic, lb in [('dashboard','&#127968;','Dashboard'),('billing','&#129534;','Billing'),('khata','&#128210;','Khata'),('products','&#128717;&#65039;','Products')] %}
+ <a class="{{ 'active' if cur.startswith(ep[:4]) }}" href="{{ url_for(ep) }}"><span>{{ ic|safe }}</span>{{ lb }}</a>
+ {% endfor %}
+ <span class="sp"></span>
+ <a href="{{ url_for('logout') }}"><span>&#128682;</span>Logout</a>
+</aside>
+{% endif %}
+<div class="content">
+{% if session.get('user') %}
+<header class="top">
+ <form class="search" action="{{ url_for('products') }}">&#128269;<input name="q" placeholder="Search products or categories..."></form>
+ <span class="sp"></span>
+ <span class="pill dark">&#128205; {{ store_name }}</span>
+ <div class="avatar">{{ session.get('user')[:1]|upper }}</div>
+</header>
+{% endif %}
+<main>
+{% with m = get_flashed_messages(with_categories=true) %}{% for c, t in m %}<div class="msg {{ c }}">{{ t }}</div>{% endfor %}{% endwith %}
+{% block body %}{% endblock %}
+</main></div></div></body></html>

@@ -1,0 +1,32 @@
+{% extends 'base.html' %}{% block body %}
+<h1>Products / Inventory</h1>
+<form method="post" action="{{ url_for('demo') }}" class="noprint" style="margin-bottom:14px"><button class="grey" title="Adds about 77 common grocery products in one click">&#10133; Add sample products</button></form>
+<div class="card"><h2>{{ 'Edit product' if edit else 'Add product' }}</h2>
+<form method="post" action="{{ url_for('product_save') }}" class="form-row">
+ {% if edit %}<input type="hidden" name="id" value="{{ edit.id }}">{% endif %}
+ <label>Name<input name="name" required value="{{ edit.name if edit else '' }}"></label>
+ <label>Category<input name="category" list="cats" value="{{ edit.category if edit and edit.category else '' }}"></label>
+ <datalist id="cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
+ <label>Unit<input name="unit" size="6" value="{{ edit.unit if edit else 'pcs' }}"></label>
+ <label>Cost price<input name="cost" type="number" step="0.01" style="width:90px" value="{{ edit.cost if edit else 0 }}"></label>
+ <label>Selling price<input name="price" type="number" step="0.01" style="width:100px" value="{{ edit.price if edit else 0 }}"></label>
+ <label>GST %<input name="gst" type="number" step="0.01" style="width:70px" value="{{ edit.gst if edit else 0 }}"></label>
+ <label>Stock<input name="stock" type="number" step="0.01" style="width:90px" value="{{ edit.stock if edit else 0 }}"></label>
+ <label>Min stock<input name="min_stock" type="number" step="0.01" style="width:80px" value="{{ edit.min_stock if edit else 5 }}"></label>
+ <label>Expiry<input name="expiry" type="date" value="{{ edit.expiry if edit and edit.expiry else '' }}"></label>
+ <button>Save</button>{% if edit %}<a class="btn grey" href="{{ url_for('products') }}">Cancel</a>{% endif %}
+</form></div>
+<div class="card">
+<form class="form-row" style="margin-bottom:10px"><input name="q" placeholder="Search name/category" value="{{ q }}"><button>Search</button>
+</form>
+<div class="scroll"><table>
+<tr><th>Name</th><th>Category</th><th>Cost</th><th>Price</th><th>GST%</th><th>Stock</th><th>Expiry</th><th></th></tr>
+{% for p in rows %}<tr>
+ <td>{{ emoji(p.name, p.category) }} {{ p.name }}</td><td>{{ p.category or '' }}</td><td>{{ p.cost }}</td><td>{{ p.price }}</td><td>{{ '%g'|format(p.gst or 0) }}</td>
+ <td class="{{ 'low' if p.stock <= p.min_stock }}">{{ '%g'|format(p.stock) }} {{ p.unit }}</td>
+ <td>{% if p.expiry %}{% if p.expiry < today %}<span class="low">{{ p.expiry }} (expired)</span>
+   {% elif p.expiry <= soon %}<span class="warn">{{ p.expiry }}</span>{% else %}{{ p.expiry }}{% endif %}{% endif %}</td>
+ <td><a class="btn grey" href="{{ url_for('product_edit', pid=p.id) }}">Edit</a>
+ <a class="btn red" href="{{ url_for('product_delete', pid=p.id) }}">Del</a></td>
+</tr>{% else %}<tr><td colspan="8">No products found.</td></tr>{% endfor %}
+</table></div></div>{% endblock %}

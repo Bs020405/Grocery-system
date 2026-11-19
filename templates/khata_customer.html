@@ -1,0 +1,39 @@
+{% extends 'base.html' %}{% block body %}
+<p class="noprint"><a class="btn grey" href="{{ url_for('khata') }}">&larr; Khata</a></p>
+<h1>{{ b.name or b.phone }} <small style="font-weight:500;color:var(--muted)">{{ b.phone }}</small></h1>
+
+<div class="tiles" style="margin-bottom:16px">
+ <div class="tile"><div class="ic c1">&#129534;</div><div><small>Total billed</small><b>&#8377;{{ '%.2f'|format(b.billed) }}</b></div></div>
+ <div class="tile"><div class="ic c2">&#9989;</div><div><small>Received</small><b>&#8377;{{ '%.2f'|format(b.received) }}</b></div></div>
+ <div class="tile"><div class="ic c4">&#128210;</div><div><small>Pending</small><b class="{{ 'low' if b.balance > 0.005 }}">&#8377;{{ '%.2f'|format(b.balance) }}</b></div></div>
+</div>
+
+<div class="card noprint">
+ {% if b.balance > 0.005 %}
+ <h2>Receive payment</h2>
+ <form method="post" action="{{ url_for('khata_pay', phone=b.phone) }}" class="form-row">
+  <label>Amount (&#8377;)<input id="payAmt" name="amount" type="number" step="0.01" min="0.01" max="{{ '%.2f'|format(b.balance) }}" required style="width:130px"></label>
+  <button type="button" class="grey" onclick="document.getElementById('payAmt').value='{{ '%.2f'|format(b.balance) }}'">Full amount</button>
+  <label>Mode<select name="mode"><option>Cash</option><option>UPI</option><option>Card</option></select></label>
+  <label>Note (optional)<input name="note" placeholder="e.g. paid by son" style="min-width:200px"></label>
+  <button>Receive payment</button>
+ </form>
+ {% else %}<p class="empty" style="margin:0">Nothing pending for this customer &#9989;</p>{% endif %}
+</div>
+
+<div class="card">
+ <div class="sec" style="margin:0 0 8px"><h2 style="margin:0">All bills and payments</h2>
+  <button type="button" class="grey noprint" onclick="window.print()">&#128424;&#65039; Print statement</button></div>
+ <div class="scroll"><table>
+  <tr><th>Date</th><th>Details</th><th class="right">Bill amount</th><th class="right">Paid / Received</th><th class="right">Pending after</th></tr>
+  {% for e in b.entries %}<tr>
+   <td>{{ e.created }}</td>
+   <td>{% if e.kind == 'bill' %}<a href="{{ url_for('bill', sid=e.id) }}">{{ e.text }}</a>{% else %}{{ e.text }}{% endif %}</td>
+   <td class="right">{{ '%.2f'|format(e.debit) if e.debit else '' }}</td>
+   <td class="right">{{ '%.2f'|format(e.credit) if e.credit else '' }}</td>
+   <td class="right {{ 'low' if e.after > 0.005 }}">{{ '%.2f'|format(e.after) }}</td>
+  </tr>{% endfor %}
+  <tr><th colspan="2" class="right">Total</th><th class="right">{{ '%.2f'|format(b.billed) }}</th><th class="right">{{ '%.2f'|format(b.received) }}</th><th class="right">&#8377;{{ '%.2f'|format(b.balance) }}</th></tr>
+ </table></div>
+</div>
+{% endblock %}

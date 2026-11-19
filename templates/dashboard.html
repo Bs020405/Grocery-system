@@ -1,0 +1,82 @@
+{% extends 'base.html' %}{% block body %}
+<div class="hero">
+ <div>
+  <span class="pill">&#128994; Store open &middot; {{ today }}</span>
+  <h1>Hello, {{ session.get('user')|title }} &#128075;</h1>
+  <p>Today's sales</p>
+  <div class="big">&#8377;{{ '%.2f'|format(stats.today_sales) }}</div>
+  <p>{{ stats.today_bills }} bills today &middot; This week: &#8377;{{ '%.0f'|format(week_total) }}</p>
+ </div>
+ <div class="btns">
+  <a href="{{ url_for('billing') }}">&#129534; New Bill</a>
+  <a href="{{ url_for('products') }}">&#10133; Add Product</a>
+ </div>
+</div>
+
+{% if stats.products == 0 %}
+<div class="demo"><div><b>Your store is empty</b><br><small>Load sample products to see how the dashboard looks (you can delete them later).</small></div>
+ <form method="post" action="{{ url_for('demo') }}"><button>Load demo data</button></form></div>
+{% endif %}
+
+<div class="tiles">
+ <div class="tile"><div class="ic c1">&#128176;</div><div><small>Total sale</small><b>&#8377;{{ '%.0f'|format(stats.total_sales) }}</b></div></div>
+ <div class="tile"><div class="ic c2">&#128717;&#65039;</div><div><small>Products</small><b>{{ stats.products }}</b></div></div>
+ <div class="tile"><div class="ic c4">&#128226;</div><div><small>Low stock</small><b>{{ low|length }}</b></div></div>
+ <div class="tile"><div class="ic c3">&#9203;</div><div><small>Expiry alerts</small><b>{{ expiring|length }}</b></div></div>
+ <div class="tile"><div class="ic c6">&#128230;</div><div><small>Stock value</small><b>&#8377;{{ '%.0f'|format(stats.stock_value) }}</b></div></div>
+ {% if stats.khata_pending is defined %}
+ <a class="tile" href="{{ url_for('khata') }}" style="text-decoration:none"><div class="ic c4">&#128210;</div><div><small>Udhar pending</small><b>&#8377;{{ '%.0f'|format(stats.khata_pending) }}</b></div></a>
+ {% endif %}
+</div>
+
+{% if cats %}
+<div class="sec"><h2>Shop by category</h2><a href="{{ url_for('products') }}">View all &rarr;</a></div>
+<div class="chips">
+ {% for c in cats %}<a class="chip" href="{{ url_for('products', q=(c.cat if c.cat != 'Other' else '')) }}">{{ emoji('', c.cat) }} {{ c.cat }} <em>{{ c.n }}</em></a>{% endfor %}
+</div>
+{% endif %}
+
+{% if top %}
+<div class="sec"><h2>{{ '&#128293; Top selling'|safe if top[0].sold else '&#128722; Your products'|safe }}</h2><a href="{{ url_for('products') }}">View all &rarr;</a></div>
+<div class="pgrid">
+ {% for p in top %}
+ <a class="pcard" href="{{ url_for('billing', add=p.id) }}">
+  <div class="pimg">{{ emoji(p.name, p.category) }}</div>
+  <div class="nm">{{ p.name }}</div>
+  <div class="un">{{ p.unit }}{% if p.sold %} &middot; {{ '%g'|format(p.sold) }} sold{% endif %}</div>
+  {% if p.stock <= 0 %}<span class="badge b-red">Out of stock</span>
+  {% elif p.stock <= p.min_stock %}<span class="badge b-orange">Only {{ '%g'|format(p.stock) }} left</span>
+  {% else %}<span class="badge b-green">{{ '%g'|format(p.stock) }} in stock</span>{% endif %}
+  <div class="pr"><b>&#8377;{{ '%g'|format(p.price) }}</b><span class="add">ADD</span></div>
+ </a>
+ {% endfor %}
+</div>
+{% endif %}
+
+<div class="two">
+ <div class="card"><h2>&#128200; Last 7 days sale</h2>
+  <div class="bars">
+   {% for w in week %}<div class="bar"><em>{{ '%.0f'|format(w.amount) if w.amount else '' }}</em>
+    <div class="col"><div style="height:{{ w.pct }}%"></div></div><span>{{ w.label }}</span></div>{% endfor %}
+  </div></div>
+ <div class="card"><div class="sec" style="margin:0 0 6px"><h2>&#129534; Recent bills</h2></div>
+  {% for s in recent %}<div class="row"><div class="e">&#129534;</div>
+   <div class="m"><b>#{{ s.id }} &middot; {{ s.customer }}</b><small>{{ s.created }} &middot; {{ s.payment or 'Cash' }}</small></div>
+   <div><b>&#8377;{{ '%.2f'|format(s.total) }}</b> <a class="btn grey" style="padding:5px 10px" href="{{ url_for('bill', sid=s.id) }}">View</a></div></div>
+  {% else %}<p class="empty">No bills yet.</p>{% endfor %}</div>
+</div>
+
+<div class="two">
+ <div class="card"><h2>&#128226; Low stock</h2>
+  {% for p in low[:6] %}<div class="row"><div class="e">{{ emoji(p.name, p.category) }}</div>
+   <div class="m"><b>{{ p.name }}</b><small>{{ '%g'|format(p.stock) }} {{ p.unit }} left &middot; min {{ '%g'|format(p.min_stock) }}</small>
+   <div class="prog"><i style="width:{{ [100, (p.stock / p.min_stock * 100) if p.min_stock else 0]|min|int }}%"></i></div></div>
+   <a class="btn grey" style="padding:6px 10px" href="{{ url_for('product_edit', pid=p.id) }}">Update stock</a></div>
+  {% else %}<p class="empty">All products are well stocked &#9989;</p>{% endfor %}</div>
+ <div class="card"><h2>&#9203; Expiry alert</h2>
+  {% for p in expiring[:6] %}<div class="row"><div class="e">{{ emoji(p.name, p.category) }}</div>
+   <div class="m"><b>{{ p.name }}</b><small>{{ p.expiry }} &middot; {{ '%g'|format(p.stock) }} {{ p.unit }}</small></div>
+   {% if p.expiry < today %}<span class="badge b-red">Expired</span>{% else %}<span class="badge b-orange">Expiring soon</span>{% endif %}</div>
+  {% else %}<p class="empty">No products are about to expire &#9989;</p>{% endfor %}</div>
+</div>
+{% endblock %}
